@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fencing-controller
+  namespace: fencing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fencing-controller
+  template:
+    metadata:
+      labels:
+        app: fencing-controller
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      serviceAccountName: fencing
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: fencing-controller
+        image: kvaps/kubectl
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - "tail -f /dev/null & wait"
+        env:
+        - name: FENCING_AGENT
+          value: "kvaps/fence-agents"
+        - name: FENCING_LABEL
+          value: "fencing"
