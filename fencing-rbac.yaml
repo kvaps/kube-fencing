@@ -1,0 +1,35 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: fencing
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - list
+      - get
+      - delete
+      - create
+      - patch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: fencing
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fencing
+subjects:
+- kind: ServiceAccount
+  name: fencing
+  namespace: fencing
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fencing
+  namespace: fencing

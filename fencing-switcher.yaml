@@ -1,0 +1,42 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: fencing-switcher
+  namespace: fencing
+spec:
+  template:
+    metadata:
+      labels:
+        app: fencing-switcher
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: fencing
+                operator: Exists
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      serviceAccountName: fencing
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: fencing-switcher
+        image: kvaps/kubectl
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - |
+          kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=enabled" &&
+          trap 'kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=disabled"; exit 0' INT TERM KILL
+          tail -f /dev/null & wait
+        env:
+        - name: FENCING_LABEL
+          value: "fencing"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
