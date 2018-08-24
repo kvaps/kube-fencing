@@ -1,42 +1,42 @@
 #!/bin/sh
 
-warn () {
-  echo "$@" >&2
+debug() {
+  [ -n "$DEBUG" ] && echo $(date '+%b %d %X') "debug: $@"
 }
 
-die () {
+log() {
+  echo $(date '+%b %d %X') "info:  $@"
+}
+
+warn() {
+  echo $(date '+%b %d %X') "warn:  $@" >&2
+}
+
+die() {
   status="$1"
   shift
-  warn "$@"
+  echo $(date '+%b %d %X') "fatal: $@" >&2
   exit "$status"
 }
 
-
-echo "Starting loop"
-unset column
-# kubectl get node -o 'custom-columns=NAME:.metadata.name,STATUS:.status.conditions[?(@.type=="Ready")].status'
-kubectl get node -o json -w  | 
-  jq --raw-output --unbuffered '
-  .metadata.name,
-  .metadata.creationTimestamp,
-  (.status.conditions[] | select(.type=="Ready") | .status),
-  (.status.conditions[] | select(.type=="Ready") | .lastHeartbeatTime)' |
-while read string; do
-  column=$((column+1))
-  case "${column}" in
-    1)
-      name="${string}"
-      continue
-      ;;
-    2)
-      status="${string}"
-      unset column
-      ;;
-  esac
-
-  if [ "${status}" = "True" ]; then
-      continue
-  fi
+main() {
+  debug "FENCING_AGENT_SELECTOR=$FENCING_AGENT_SELECTOR"
+  debug "FENCING_NODE_SELECTOR=$FENCING_NODE_SELECTOR"
+  log "Starting loop"
+  kubectl get node -w -l "$FENCING_NODE_SELECTOR" | 
+  while read line; do
+    while read NAME STATUS ROLES AGE VERSION; do
+      debug "$NAME - $STATUS"
+      if [ "$STATUS" = "Ready" ]; then
+        continue
+      fi
+      REASON=$(kubectl get node "$NAME" -o 'custom-columns=STATUS:.status.conditions[?(@.type=="Ready")].reason' | tail -n1)
+      if [ "$REASON" = "NodeStatusUnknown" ]; then
+        log "$NAME - $REASON"
+      fi
+    done
+  done
+}
 
   #FENCING_AGENT=$(kubectl get pod -l "${FENCING_AGENT_SELECTOR}" | awk '$3 == "Running" {print $1}' | head -n1)
 
@@ -44,7 +44,3 @@ while read string; do
   #fence_command
   #kubectl delete node "$node"
   #kubectl create -f /tmp/node.json
-
-
-done
-
