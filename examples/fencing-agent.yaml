@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fencing-agent
+  namespace: fencing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fencing-agent
+  template:
+    metadata:
+      labels:
+        app: fencing-agent
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      serviceAccountName: fencing
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: fencing-agent
+        image: kvaps/fence-agents
+        command: 
+        - "/bin/sh"
+        - "-c"
+        - "tail -f /dev/null & wait"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: fencing-scripts
+          defaultMode: 0744

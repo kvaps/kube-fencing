@@ -24,13 +24,15 @@ spec:
       hostPID: true
       containers:
       - name: fencing-controller
-        image: kvaps/kubectl
-        command: 
-        - "/bin/sh"
-        - "-c"
-        - "tail -f /dev/null & wait"
+        image: kvaps/kube-fencing-controller
         env:
-        - name: FENCING_AGENT
-          value: "kvaps/fence-agents"
-        - name: FENCING_LABEL
-          value: "fencing"
+        - name: FENCING_NODE_SELECTOR
+          value: "fencing=enabled"
+        - name: FENCING_AGENT_SELECTOR
+          value: "app=fencing-agent"
+        - name: FENCING_SCRIPT
+          value: "/scripts/fence.sh"
+        - name: FLUSHING_MODE
+          value: "recreate"
+        - name: DEBUG
+          value: "1"
