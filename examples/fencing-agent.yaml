@@ -24,7 +24,7 @@ spec:
       hostPID: true
       containers:
       - name: fencing-agent
-        image: kvaps/fence-agents
+        image: kvaps/kube-fencing-agent
         command: 
         - "/bin/sh"
         - "-c"
