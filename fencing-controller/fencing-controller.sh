@@ -84,6 +84,8 @@ main() {
         fence "$NAME"
         if [ $? -eq 0 ]; then
           flush "$NAME"
+        else
+          warn: "Fencing failed $NODE"
         fi
       fi
     done
