@@ -24,7 +24,7 @@ enable_fencing() {
 
 disable_fencing() {
   log "Disabling fencing"
-  run kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=disable"
+  run kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=disabled"
 }
 
 main() {
