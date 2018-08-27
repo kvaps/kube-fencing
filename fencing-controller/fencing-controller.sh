@@ -49,7 +49,7 @@ flush() {
       run kubectl delete node "$1"
     ;;
     recreate)
-      run kubectl get pod --field-selector "spec.nodeName=$1" --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name; echo) |
+      run kubectl get pod --field-selector "spec.nodeName=$1" --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name |
         awk '{if (!a[$1]++){printf "\n" $1 " " $2} else {printf " " $2}}' | tail -n+3 | head -n-1 |
         while read line; do
           NAMESPACE="${line%% *}"
