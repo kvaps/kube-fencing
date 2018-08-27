@@ -50,9 +50,9 @@ flush() {
     ;;
     recreate)
       log "Removing pods from $1"
-      kubectl delete pod --field-selector "spec.nodeName=$1" --grace-period=0 --force --wait=false
+      run kubectl delete pod --field-selector "spec.nodeName=$1" --grace-period=0 --force --wait=false
       log "Recreating node $1"
-      kubectl get node -o json "$1" | kubectl replace node "$1" -f -
+      run kubectl get node -o json "$1" | run kubectl replace node "$1" -f -
     ;;
   esac
   set +e
