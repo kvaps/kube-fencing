@@ -49,11 +49,10 @@ flush() {
       run kubectl delete node "$1"
     ;;
     recreate)
+      log "Removing pods from $1"
+      kubectl delete pod --field-selector "spec.nodeName=$1" --grace-period=0 --force --wait=false
       log "Recreating node $1"
-      rm -f /tmp/node.json
-      run kubectl get node -o json "$1" | jq 'del(.status)' > /tmp/node.json
-      run kubectl delete node "$1"
-      run kubectl create -f /tmp/node.json
+      kubectl get node -o json "$1" | kubectl replace node "$1" -f -
     ;;
   esac
   set +e
