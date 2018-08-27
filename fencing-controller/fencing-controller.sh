@@ -49,8 +49,11 @@ flush() {
       run kubectl delete node "$1"
     ;;
     recreate)
-      log "Removing pods from $1"
-      run kubectl delete pod --field-selector "spec.nodeName=$1" --grace-period=0 --force --wait=false
+      run kubectl get pod --field-selector "spec.nodeName=$1" --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name |
+        tail -n+2 |
+        while read NAMESPACE POD; do 
+          run kubectl delete pod -n "$NAMESPACE" "$POD" --grace-period=0 --force --wait=false 2>/dev/null
+        done
       log "Recreating node $1"
       run kubectl get node -o json "$1" | run kubectl replace node "$1" -f -
     ;;
