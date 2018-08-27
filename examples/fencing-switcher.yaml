@@ -25,14 +25,7 @@ spec:
       hostPID: true
       containers:
       - name: fencing-switcher
-        image: kvaps/kubectl
-        command: 
-        - "/bin/sh"
-        - "-c"
-        - |
-          kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=enabled" &&
-          trap 'kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=disabled"; exit 0' INT TERM KILL
-          tail -f /dev/null & wait
+        image: kvaps/kube-fencing-switcher
         env:
         - name: FENCING_LABEL
           value: "fencing"
