@@ -10,4 +10,6 @@ metadata:
 data:
   fence.sh: |
     #!/bin/bash
-    echo "$(hostname): fencing $1 - ok"
+    NODE="$1"
+    ILO="${NODE}-ilo"
+    fence_ilo -a "$ILO" -l user -p password
