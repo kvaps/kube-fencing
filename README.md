@@ -59,7 +59,7 @@ fence_bladecenter     fence_drac5           fence_ibmblade        fence_ilo4    
 
 ### Create namespace and rbac roles
 ```
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-scripts.yaml
+kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/00-fencing-namespace.yaml
 kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-rbac.yaml
 ```
 
@@ -116,8 +116,7 @@ You can specify needed variables inside yaml file for each service.
   
 * **FENCING_AGENT_SELECTOR**
 
-  Agent pod selector, fencing-controller will run script inside this pod, it should be `
-  ` in the same namespace with fencing-controller *(example: `app=fencing-agents`)*
+  Agent pod selector, fencing-controller will run script inside this pod, it should be `Running` in the same namespace with fencing-controller *(example: `app=fencing-agents`)*
   
 * **FENCING_SCRIPT**
 
