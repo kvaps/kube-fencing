@@ -22,7 +22,6 @@ spec:
         effect: NoSchedule
       serviceAccountName: fencing
       hostNetwork: true
-      hostPID: true
       containers:
       - name: fencing-switcher
         image: kvaps/kube-fencing-switcher
@@ -33,3 +32,5 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        #- name: DEBUG
+        #  value: "1"

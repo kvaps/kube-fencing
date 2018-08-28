@@ -19,16 +19,11 @@ spec:
       - key: node-role.kubernetes.io/master
         operator: Exists
         effect: NoSchedule
-      serviceAccountName: fencing
       hostNetwork: true
-      hostPID: true
       containers:
       - name: fencing-agents
         image: kvaps/kube-fencing-agents
-        command: 
-        - "/bin/sh"
-        - "-c"
-        - "tail -f /dev/null & wait"
+        command: [ "/usr/bin/tail", "-f", "/dev/null" ]
         volumeMounts:
         - name: scripts
           mountPath: /scripts

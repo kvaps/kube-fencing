@@ -21,7 +21,6 @@ spec:
         effect: NoSchedule
       serviceAccountName: fencing
       hostNetwork: true
-      hostPID: true
       containers:
       - name: fencing-controller
         image: kvaps/kube-fencing-controller
@@ -34,5 +33,5 @@ spec:
           value: "/scripts/fence.sh"
         - name: FLUSHING_MODE
           value: "recreate"
-        - name: DEBUG
-          value: "1"
+        #- name: DEBUG
+        #  value: "1"
