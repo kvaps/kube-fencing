@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fencing-agent
+  name: fencing-agents
   namespace: fencing
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fencing-agent
+      app: fencing-agents
   template:
     metadata:
       labels:
-        app: fencing-agent
+        app: fencing-agents
     spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
@@ -23,8 +23,8 @@ spec:
       hostNetwork: true
       hostPID: true
       containers:
-      - name: fencing-agent
-        image: kvaps/kube-fencing-agent
+      - name: fencing-agents
+        image: kvaps/kube-fencing-agents
         command: 
         - "/bin/sh"
         - "-c"

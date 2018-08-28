@@ -67,7 +67,7 @@ flush() {
 main() {
   log "Loading parameters"
   FENCING_NODE_SELECTOR=${FENCING_NODE_SELECTOR:-fencing=enabled}
-  FENCING_AGENT_SELECTOR=${FENCING_AGENT_SELECTOR:-app=fencing-agent}
+  FENCING_AGENT_SELECTOR=${FENCING_AGENT_SELECTOR:-app=fencing-agents}
   FENCING_SCRIPT=${FENCING_SCRIPT:-/scripts/fence.sh}
   FLUSHING_MODE=${FLUSHING_MODE:-delete}
   log "FENCING_NODE_SELECTOR: $FENCING_NODE_SELECTOR"

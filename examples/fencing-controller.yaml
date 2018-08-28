@@ -29,7 +29,7 @@ spec:
         - name: FENCING_NODE_SELECTOR
           value: "fencing=enabled"
         - name: FENCING_AGENT_SELECTOR
-          value: "app=fencing-agent"
+          value: "app=fencing-agents"
         - name: FENCING_SCRIPT
           value: "/scripts/fence.sh"
         - name: FLUSHING_MODE
