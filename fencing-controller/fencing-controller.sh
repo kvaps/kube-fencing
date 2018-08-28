@@ -58,7 +58,7 @@ flush() {
           run kubectl delete pod -n "$NAMESPACE" $PODS --grace-period=0 --force --wait=false 2>/dev/null
         done
       log "Recreating node $1"
-      run kubectl get node -o json "$1" | run kubectl replace node "$1" -f -
+      run kubectl get node -o json "$1" | jq 'del(.status)' | run kubectl replace node "$1" -f -
     ;;
   esac
   set +e
