@@ -58,7 +58,10 @@ flush() {
           run kubectl delete pod -n "$NAMESPACE" $PODS --grace-period=0 --force --wait=false 2>/dev/null
         done
       log "Recreating node $1"
-      kubectl get node -o json "$1" | jq 'del(.status)' | ( kubectl delete node "$1" && kubectl create -f - )
+      run kubectl get node -o json "$1" | jq 'del(.status)' > "/tmp/node-${1}.yaml"
+      run kubectl delete node "$1"
+      run kubectl create -f "/tmp/node-${1}.yaml"
+      rm -f "/tmp/node-${1}.yaml"
     ;;
   esac
   set +e
