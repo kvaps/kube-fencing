@@ -82,8 +82,8 @@ main() {
   run kubectl get node -w -l "$FENCING_NODE_SELECTOR" | 
   while read line; do
     while read NAME STATUS ROLES AGE VERSION; do
-      debug "$NAME - $STATUS"
-      if [ "$STATUS" = "Ready" ]; then
+      debug "$NAME - ${STATUS%%,*}"
+      if [ "${STATUS%%,*}" = "Ready" ]; then
         continue
       fi
       REASON=$(kubectl get node "$NAME" -o 'custom-columns=STATUS:.status.conditions[?(@.type=="Ready")].reason' | tail -n1)
