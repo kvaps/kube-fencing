@@ -125,8 +125,9 @@ You can specify needed variables inside yaml file for each service.
 * **FLUSHING_MODE**
 
   * `delete` - to delete node from cluster.
-  * `recreate` - to flush all resources from node, and recreate.
-  
+  * `recreate` - to flush all resources from node, and recreate node.
+  * `info` - do nothing and disable fencing call (for debugging)
+
 * **DEBUG**
 
   If set, debug output will be enabled *(example: `1`)*

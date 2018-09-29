@@ -89,6 +89,9 @@ main() {
       REASON=$(kubectl get node "$NAME" -o 'custom-columns=STATUS:.status.conditions[?(@.type=="Ready")].reason' | tail -n1)
       if [ "$REASON" = "NodeStatusUnknown" ]; then
         log "$NAME - $REASON"
+        if [ "$FLUSHING_MODE" = "info" ]; then
+          continue
+        fi
         fence "$NAME"
         if [ $? -eq 0 ]; then
           log "Fencing success $NODE"
