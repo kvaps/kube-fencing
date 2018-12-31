@@ -51,7 +51,7 @@ flush() {
     recreate)
       log "Deleting pods from $1"
       run kubectl get pod --field-selector "spec.nodeName=$1" --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name |
-        awk '{if (!a[$1]++){printf "\n" $1 " " $2} else {printf " " $2}}' | tail -n+3 | head -n-1 |
+        awk '{if (!a[$1]++){printf "\n" $1 " " $2} else {printf " " $2}} END {print ""}' | tail -n+3 |
         while read line; do
           NAMESPACE="${line%% *}"
           PODS="${line#* }"
