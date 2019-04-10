@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 log() {
   echo $(date '+%b %d %X') "info:  $@"
 }
@@ -10,21 +12,23 @@ die() {
   exit "$status"
 }
 
-# Run external command
-run() {
-  set -e
-  ( [ -n "$DEBUG" ] && set -x; "$@" )
-  set +e
+set_node_label() {
+  log "Setting $1 $2=$3"
+  CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+  DATA="[{\"op\": \"add\", \"path\": \"/metadata/labels/$2\", \"value\": \"$3\"}]"
+  URL="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT_443_TCP_PORT/api/v1/nodes/$1"
+  curl -o /dev/null -sS -m5 --cacert "$CA_CERT" -H "Authorization: Bearer $TOKEN" --request PATCH --data "$DATA" -H "Content-Type:application/json-patch+json" "$URL"
 }
 
 enable_fencing() {
   log "Enabling fencing"
-  run kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=enabled"
+  set_node_label "${NODE_NAME}" "$FENCING_LABEL" enabled
 }
 
 disable_fencing() {
   log "Disabling fencing"
-  run kubectl label node --overwrite "${NODE_NAME}" "${FENCING_LABEL}=disabled"
+  set_node_label "${NODE_NAME}" "$FENCING_LABEL" disabled
 }
 
 main() {
