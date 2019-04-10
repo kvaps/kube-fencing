@@ -70,16 +70,44 @@ flush() {
   set +e
 }
 
+wait_back_online() {
+  # BusyBox timeout requires -t flag
+  if timeout --version 2>&1 | grep -q BusyBox; then
+    TIMEOUT_ARG="-t $2"
+  else
+    TIMEOUT_ARG="$2"
+  fi
+
+  local START=$(date +%s)
+  timeout $TIMEOUT_ARG kubectl get node -w "$1" -o custom-columns='STATUS:.status.conditions[?(@.type=="Ready")].reason' |
+  while read REASON; do
+    if [ "$REASON" = "KubeletReady" ]; then
+      break
+    fi
+  done
+  local END=$(date +%s)
+  local RUNTIME=$((END-START))
+  echo "$RUNTIME"
+
+  if [ "$RUNTIME" -lt "$TIMEOUT" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 main() {
   log "Loading parameters"
   FENCING_NODE_SELECTOR=${FENCING_NODE_SELECTOR:-fencing=enabled}
   FENCING_AGENT_SELECTOR=${FENCING_AGENT_SELECTOR:-app=fencing-agents}
   FENCING_SCRIPT=${FENCING_SCRIPT:-/scripts/fence.sh}
   FLUSHING_MODE=${FLUSHING_MODE:-delete}
+  TIMEOUT=${TIMEOUT:-0}
   log "FENCING_NODE_SELECTOR: $FENCING_NODE_SELECTOR"
   log "FENCING_AGENT_SELECTOR: $FENCING_AGENT_SELECTOR"
   log "FENCING_SCRIPT: $FENCING_SCRIPT"
   log "FLUSHING_MODE: $FLUSHING_MODE"
+  log "TIMEOUT: $TIMEOUT"
 
   log "Starting loop"
   run kubectl get node -w -l "$FENCING_NODE_SELECTOR" | 
@@ -90,19 +118,34 @@ main() {
         continue
       fi
       REASON=$(kubectl get node "$NAME" -o 'custom-columns=STATUS:.status.conditions[?(@.type=="Ready")].reason' | tail -n1)
-      if [ "$REASON" = "NodeStatusUnknown" ]; then
-        log "$NAME - $REASON"
-        if [ "$FLUSHING_MODE" = "info" ]; then
-          continue
-        fi
-        fence "$NAME"
+      if [ "$REASON" != "NodeStatusUnknown" ]; then
+        continue
+      fi
+      log "$NAME - $REASON"
+      if [ "$FLUSHING_MODE" = "info" ]; then
+        continue
+      fi
+
+      log "Waiting $TIMEOUT seconds until node come back"
+      if [ "$TIMEOUT" -gt 0 ] 2>/dev/null; then
+        WAIT_TIME=$(wait_back_online "$NAME" "$TIMEOUT")
         if [ $? -eq 0 ]; then
-          log "Fencing success $NODE"
-          flush "$NAME"
+          log "Node $NAME come back online after $WAIT_TIME seconds"
+          log "Fencing aborted"
+          break
         else
-          warn "Fencing failed $NODE"
+          log "Node $NAME has not come back in $TIMEOUT seconds timeout period"
         fi
       fi
+
+      fence "$NAME"
+      if [ $? -eq 0 ]; then
+        log "Fencing success"
+        flush "$NAME"
+      else
+        warn "Fencing failed"
+      fi
+
     done
   done
 }

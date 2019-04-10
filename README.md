@@ -129,6 +129,10 @@ You can specify needed variables inside yaml file for each service.
   * `none` - do nothing, just call the script.
   * `info` - do nothing and disable fencing call (for debugging)
 
+* **TIMEOUT**
+
+  If set, wait certian amout seconds before killing the node *(example: `10`)*
+
 * **DEBUG**
 
   If set, debug output will be enabled *(example: `1`)*

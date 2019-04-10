@@ -33,5 +33,7 @@ spec:
           value: "/scripts/fence.sh"
         - name: FLUSHING_MODE
           value: "recreate"
+        - name: TIMEOUT
+          value: "0"
         #- name: DEBUG
         #  value: "1"
