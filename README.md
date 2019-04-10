@@ -126,6 +126,7 @@ You can specify needed variables inside yaml file for each service.
 
   * `delete` - to delete node from cluster.
   * `recreate` - to flush all resources from node, and recreate node.
+  * `none` - do nothing, just call the script.
   * `info` - do nothing and disable fencing call (for debugging)
 
 * **DEBUG**

@@ -44,6 +44,9 @@ fence() {
 flush() {
   set -e
   case "$FLUSHING_MODE" in
+    none)
+      true
+    ;;
     delete)
       log "Deleting node $1"
       run kubectl delete node "$1"
