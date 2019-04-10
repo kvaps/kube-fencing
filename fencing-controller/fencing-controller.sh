@@ -119,8 +119,13 @@ main() {
       fi
       REASON=$(kubectl get node "$NAME" -o 'custom-columns=STATUS:.status.conditions[?(@.type=="Ready")].reason' | tail -n1)
       if [ "$REASON" != "NodeStatusUnknown" ]; then
+        PREVIOUS_NAME=
         continue
       fi
+      if [ "$NAME" = "$PREVIOUS_NAME" ]; then
+        continue
+      fi
+      PREVIOUS_NAME="$NAME"
       log "$NAME - $REASON"
       if [ "$FLUSHING_MODE" = "info" ]; then
         continue
