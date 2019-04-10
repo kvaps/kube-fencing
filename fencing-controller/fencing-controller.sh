@@ -45,7 +45,8 @@ flush() {
   set -e
   case "$FLUSHING_MODE" in
     none)
-      true
+      log "Disable watcher for node $1"
+      run kubectl label node "$1" "${FENCING_NODE_SELECTOR%%=*}=" --overwrite
     ;;
     delete)
       log "Deleting node $1"
