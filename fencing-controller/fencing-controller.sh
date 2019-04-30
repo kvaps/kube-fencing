@@ -71,29 +71,12 @@ flush() {
 }
 
 wait_back_online() {
-  # BusyBox timeout requires -t flag
-  if timeout --version 2>&1 | grep -q BusyBox; then
-    TIMEOUT_ARG="-t $2"
-  else
-    TIMEOUT_ARG="$2"
-  fi
-
   local START=$(date +%s)
-  timeout $TIMEOUT_ARG kubectl get node -w "$1" -o custom-columns='STATUS:.status.conditions[?(@.type=="Ready")].reason' |
-  while read REASON; do
-    if [ "$REASON" = "KubeletReady" ]; then
-      break
-    fi
-  done
+  run kubectl wait node --for=condition=Ready --timeout=${2}s "$1"
+  local EC=$?
   local END=$(date +%s)
-  local RUNTIME=$((END-START))
-  echo "$RUNTIME"
-
-  if [ "$RUNTIME" -lt "$TIMEOUT" ]; then
-    return 0
-  else
-    return 1
-  fi
+  echo "$((END-START))"
+  return "$EC"
 }
 
 main() {
