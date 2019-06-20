@@ -1,0 +1,13 @@
+build_image:
+  stage: build
+  tags: [ "docker1" ]
+  only:
+    refs:
+    - tags
+    changes:
+    - dockerfiles/**/*
+    - .gitlab-ci.yml
+  script:
+  #- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  - dockerfiles/build.sh
+  - dockerfiles/push.sh
