@@ -93,7 +93,10 @@ main() {
   log "TIMEOUT: $TIMEOUT"
 
   log "Starting loop"
-  run kubectl get node -w -l "$FENCING_NODE_SELECTOR" | 
+  while kubectl get node -w --watch-only=${WATCH_ONLY:-false} -l "$FENCING_NODE_SELECTOR"; do
+     WATCH_ONLY=true
+     warn "Restarting loop"
+  done |
   while read line; do
     while read NAME STATUS ROLES AGE VERSION; do
       debug "$NAME - ${STATUS%%,*}"
