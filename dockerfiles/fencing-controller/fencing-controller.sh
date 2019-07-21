@@ -99,6 +99,9 @@ main() {
   done |
   while read line; do
     while read NAME STATUS ROLES AGE VERSION; do
+      if [ "$NAME" = "NAME" ]; then
+        continue
+      fi
       debug "$NAME - ${STATUS%%,*}"
       if [ "${STATUS%%,*}" = "Ready" ]; then
         continue
