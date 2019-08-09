@@ -22,7 +22,7 @@ spec:
       hostNetwork: true
       containers:
       - name: fencing-agents
-        image: kvaps/kube-fencing-agents
+        image: kvaps/kube-fencing-agents:v1.2.6
         command: [ "/usr/bin/tail", "-f", "/dev/null" ]
         volumeMounts:
         - name: scripts

@@ -23,7 +23,7 @@ spec:
       hostNetwork: true
       containers:
       - name: fencing-controller
-        image: kvaps/kube-fencing-controller
+        image: kvaps/kube-fencing-controller:v1.2.6
         env:
         - name: FENCING_NODE_SELECTOR
           value: "fencing=enabled"

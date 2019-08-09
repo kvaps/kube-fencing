@@ -24,7 +24,7 @@ spec:
       hostNetwork: true
       containers:
       - name: fencing-switcher
-        image: kvaps/kube-fencing-switcher
+        image: kvaps/kube-fencing-switcher:v1.2.6
         env:
         - name: FENCING_LABEL
           value: "fencing"
