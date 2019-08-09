@@ -43,7 +43,7 @@ The container with installed `fence-agents` package.
 When fencing procedure is called **fecning-controller** goes to the **fecning-agents** pod and executes custom script there.
 If script was success it will celanup (or delete) the node in the kubernetes.
 
-The next fencing agetns are included:
+The next fencing agents are included:
 
 ```
 fence_ack_manual      fence_brocade         fence_dummy           fence_idrac           fence_ilo4_ssh        fence_ipmilan         fence_ovh             fence_rsb             fence_vmware          
