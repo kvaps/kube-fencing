@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fencing.fullname" . }}-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "fencing.fullname" . }}-controller
+  template:
+    metadata:
+      labels:
+        app: {{ template "fencing.fullname" . }}-controller
+    spec:
+      nodeSelector:
+{{ toYaml .Values.controller.nodeSelector | indent 8 }}
+      tolerations:
+{{ toYaml .Values.controller.tolerations | indent 6 }}
+      serviceAccountName: {{ template "fencing.fullname" . }}
+      hostNetwork: true
+      imagePullSecrets:
+{{ toYaml .Values.controller.image.pullSecrets | indent 8 }}
+      containers:
+      - name: fencing-controller
+        image: {{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}
+        imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+        env:
+        - name: FENCING_NODE_SELECTOR
+          value: "{{ .Values.fencingLabelName }}=enabled"
+        - name: FENCING_AGENT_SELECTOR
+          value: "app={{ template "fencing.fullname" . }}-agents"
+        - name: FENCING_SCRIPT
+          value: "/scripts/{{ .Values.controller.scriptName }}"
+        - name: FLUSHING_MODE
+          value: "{{ .Values.controller.flushingMode }}"
+        - name: TIMEOUT
+          value: "{{ .Values.controller.timeout }}"
+        - name: DEBUG
+          value: "{{ .Values.controller.debug }}"

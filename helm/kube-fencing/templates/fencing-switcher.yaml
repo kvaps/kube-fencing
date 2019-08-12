@@ -1,0 +1,38 @@
+{{- if .Values.switcher.enabled }}
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: {{ template "fencing.fullname" . }}-switcher
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ template "fencing.fullname" . }}-switcher
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ .Values.fencingLabelName }}
+                operator: Exists
+      tolerations:
+{{ toYaml .Values.switcher.tolerations | indent 6 }}
+      serviceAccountName: {{ template "fencing.fullname" . }}
+      hostNetwork: true
+      imagePullSecrets:
+{{ toYaml .Values.switcher.image.pullSecrets | indent 8 }}
+      containers:
+      - name: fencing-switcher
+        image: {{ .Values.switcher.image.repository }}:{{ .Values.switcher.image.tag }}
+        imagePullPolicy: {{ .Values.switcher.image.pullPolicy }}
+        env:
+        - name: FENCING_LABEL
+          value: "{{ .Values.fencingLabelName }}"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DEBUG
+          value: "{{ .Values.switcher.debug }}"
+{{- end }}
