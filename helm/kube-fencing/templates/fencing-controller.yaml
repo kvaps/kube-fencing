@@ -12,10 +12,14 @@ spec:
       labels:
         app: {{ template "fencing.fullname" . }}-controller
     spec:
+{{- with .Values.controller.nodeSelector }}
       nodeSelector:
-{{ toYaml .Values.controller.nodeSelector | indent 8 }}
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.controller.tolerations }}
       tolerations:
-{{ toYaml .Values.controller.tolerations | indent 6 }}
+{{- end }}
+{{ toYaml . | indent 6 }}
       serviceAccountName: {{ template "fencing.fullname" . }}
       hostNetwork: true
       imagePullSecrets:

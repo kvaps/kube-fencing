@@ -18,12 +18,13 @@ controller:
     pullSecrets:
       - name: regsecret
 
-  nodeSelector: {}
-  #  'node-role.kubernetes.io/master': ''
-  tolerations: []
-  #  - key: node-role.kubernetes.io/master
-  #  operator: Exists
-  #  effect: NoSchedule
+  # nodeSelector:
+  #   'node-role.kubernetes.io/master': ''
+
+  # tolerations:
+  #   - key: node-role.kubernetes.io/master
+  #     operator: Exists
+  #     effect: NoSchedule
   
   # timeout in seconds to wait before killing failed node
   timeout: 5
@@ -49,12 +50,13 @@ agents:
     pullSecrets:
       - name: regsecret
 
-  nodeSelector: {}
-  #  'node-role.kubernetes.io/master': ''
-  tolerations: []
-  #  - key: node-role.kubernetes.io/master
-  #  operator: Exists
-  #  effect: NoSchedule
+  # nodeSelector:
+  #   'node-role.kubernetes.io/master': ''
+
+  # tolerations:
+  #   - key: node-role.kubernetes.io/master
+  #     operator: Exists
+  #     effect: NoSchedule
 
 # ------------------------------------------------------------------------------
 # fencing-script are called by controller for fence the node
@@ -92,10 +94,10 @@ switcher:
     pullSecrets:
       - name: regsecret
 
-  tolerations: []
-  #  - key: node-role.kubernetes.io/master
-  #    operator: Exists
-  #    effect: NoSchedule
+  # tolerations:
+  #   - key: node-role.kubernetes.io/master
+  #     operator: Exists
+  #     effect: NoSchedule
 
   # enable debug log (0 - false, 1 - true)
   debug: 0

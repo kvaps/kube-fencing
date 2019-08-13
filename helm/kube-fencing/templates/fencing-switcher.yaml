@@ -16,8 +16,10 @@ spec:
             - matchExpressions:
               - key: {{ .Values.fencingLabelName }}
                 operator: Exists
+{{- with .Values.switcher.tolerations }}
       tolerations:
-{{ toYaml .Values.switcher.tolerations | indent 6 }}
+{{ toYaml . | indent 6 }}
+{{- end }}
       serviceAccountName: {{ template "fencing.fullname" . }}
       hostNetwork: true
       imagePullSecrets:

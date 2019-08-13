@@ -13,10 +13,14 @@ spec:
       labels:
         app: {{ template "fencing.fullname" . }}-agents
     spec:
+{{- with .Values.agents.nodeSelector }}
       nodeSelector:
-{{ toYaml .Values.agents.nodeSelector | indent 8 }}
+{{ toYaml . | indent 8 }}
+{{- end }}
+{{- with .Values.agents.tolerations }}
       tolerations:
-{{ toYaml .Values.agents.tolerations | indent 6 }}
+{{ toYaml . | indent 6 }}
+{{- end }}
       hostNetwork: true
       imagePullSecrets:
 {{ toYaml .Values.agents.image.pullSecrets | indent 8 }}
