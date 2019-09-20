@@ -16,13 +16,13 @@ die() {
 }
 
 debug() {
-  [ -n "$DEBUG" ] && echo $(date '+%b %d %X') "debug: $@" >&2
+  [ "$DEBUG" = 1 ] && echo $(date '+%b %d %X') "debug: $@" >&2
 }
 
 # Run external command
 run() {
   set -e
-  ( [ -n "$DEBUG" ] && set -x; "$@" )
+  ( [ "$DEBUG" = 1 ] && set -x; "$@" )
   set +e
 }
 
