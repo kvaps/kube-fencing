@@ -1,6 +1,6 @@
 name: kube-fencing
 description: Fencing implementation for Kubernetes
-version: 1.2.6
+version: 1.2.7
 keywords:
   - fencing
   - fence

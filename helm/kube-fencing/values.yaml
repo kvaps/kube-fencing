@@ -13,7 +13,7 @@ fencingLabelName: fencing
 controller:
   image:
     repository: kvaps/kube-fencing-controller
-    tag: v1.2.6
+    tag: v1.2.7
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
@@ -45,7 +45,7 @@ agents:
 
   image:
     repository: kvaps/kube-fencing-agents
-    tag: v1.2.6
+    tag: v1.2.7
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
@@ -89,7 +89,7 @@ switcher:
 
   image:
     repository: kvaps/kube-fencing-switcher
-    tag: v1.2.6
+    tag: v1.2.7
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
