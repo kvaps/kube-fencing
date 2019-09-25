@@ -1,9 +1,12 @@
-apiVersion: extensions/v1beta1
+apiVersion: extensions/v1
 kind: DaemonSet
 metadata:
   name: fencing-switcher
   namespace: fencing
 spec:
+  selector:
+    matchLabels:
+      app: fencing-switcher
   template:
     metadata:
       labels:

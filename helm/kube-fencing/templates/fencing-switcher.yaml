@@ -1,9 +1,12 @@
 {{- if .Values.switcher.enabled }}
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ template "fencing.fullname" . }}-switcher
 spec:
+  selector:
+    matchLabels:
+      app: {{ template "fencing.fullname" . }}-switcher
   template:
     metadata:
       labels:
