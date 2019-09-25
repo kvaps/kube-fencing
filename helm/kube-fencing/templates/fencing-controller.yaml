@@ -18,8 +18,8 @@ spec:
 {{- end }}
 {{- with .Values.controller.tolerations }}
       tolerations:
-{{- end }}
 {{ toYaml . | indent 6 }}
+{{- end }}
       serviceAccountName: {{ template "fencing.fullname" . }}
       hostNetwork: true
       imagePullSecrets:
