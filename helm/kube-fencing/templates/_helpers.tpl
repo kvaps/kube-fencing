@@ -12,7 +12,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 */}}
 {{- define "fencing.fullname" -}}
 {{- $name := default "fencing" .Values.nameOverride -}}
-{{- if eq .Release.Name "release-name" -}}
+{{- if eq (.Release.Name | upper) "RELEASE-NAME" -}}
 {{- $name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
