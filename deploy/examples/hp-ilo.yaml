@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  name: fencing
+template:
+  spec:
+    containers:
+    - name: fence
+      image: docker.io/kvaps/kube-fencing-agents:v2.0.0
+      command: ["fence_ilo", "-a", "$(FENCING_ID)", "-l", "user", "-p", "password"]
+      env:
+      - name: FENCING_NODE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/node']
+      - name: FENCING_ID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/id']

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  name: fencing
+  annotations:
+    fencing/after-hook: 'fencing-after'
+    fencing/mode: 'none'
+template:
+  spec:
+    containers:
+    - name: fence
+      image: alpine:3.11
+      command: ["echo", "kill node $(FENCING_NODE) via $(FENCING_ID)"]
+      env:
+      - name: FENCING_NODE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/node']
+      - name: FENCING_ID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/id']
+---
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  name: fencing-after
+template:
+  spec:
+    containers:
+    - name: fence
+      image: alpine:3.11
+      command: ["echo", "node $(FENCING_NODE) just fenced via $(FENCING_ID)"]
+      env:
+      - name: FENCING_NODE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/node']
+      - name: FENCING_ID
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.annotations['fencing/id']
