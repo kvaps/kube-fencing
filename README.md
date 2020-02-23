@@ -20,28 +20,28 @@ Fencing implementation for Kubernetes
 
 ## Overview
 
-This project was designed to solve the problem of cleaning resources from the failed nodes that's blocks any further operation and recovery.
+This project designed to solve the problem of cleaning resources from the failed nodes that's blocks any further operation and recovery.
 
-Fencing is neccesary operation if you want to have redundancy for your StatefulSets.
+Fencing is neccesary if you want to have redundancy for your StatefulSet pods.
 
-If any node falls, **kube-fencing** will kill it via **fence-agent**, afterwards it will clear the node of all resources, that's make Kubernetes possible to schedule pods on the rest nodes.
+If any node falls, **kube-fencing** will guaranteed kill it via **fence-agent**, afterwards it will clear the node of all resources, that's make Kubernetes possible to schedule pods on the rest nodes.
 
-Kube-fencing includes three services:
+Kube-fencing includes three containers:
 
 ### fencing-controller
 
-The main service which watches for the node states, and if one of them becomes to the `NotReady` due `NodeStatusUnknown` reason, runs fencing procedure.
+The main controller which watches for the node states, and if one of them becomes to the `NotReady` due `NodeStatusUnknown` reason, runs fencing procedure.
 
 ### fencing-switcher
 
-This is small daemonset which enable fencing for the each node during start up, and disable it when node is gracefully shutdowns or reboots.
+This is small container which can be deployed as daemonset, it will enable fencing during start, and disable fencing when node is gracefully shutdowns or reboots.
 
 ### fencing-agents
 
-The container with installed `fence-agents` package.
+This container contains installed `fence-agents` package.
 
-When fencing procedure is called **fecning-controller** goes to the **fecning-agents** pod and executes custom script there.
-If script was success it will celanup (or delete) the node in the kubernetes.
+When fencing procedure is called **fecning-controller** creates Job which can use **fecning-agents** image to execute specific fencing agent.
+If fencing was successful it will celanup (or delete) the node from the kubernetes.
 
 The next fencing agents are included:
 
@@ -57,97 +57,44 @@ fence_bladecenter     fence_drac5           fence_ibmblade        fence_ilo4    
 
 ## Quick Start
 
-### Create namespace and rbac roles
-```
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/00-fencing-namespace.yaml
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-rbac.yaml
-```
-
-### Apply main services
-```
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-controller.yaml
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-agents.yaml
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-scripts.yaml
-kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-switcher.yaml
+### Install kube-fencing
+```bash
+kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/deploy/kube-fencing.yaml
 ```
 
-### Prepare fencing-script
+### Apply example PodTemplate
 
-Then you should download [`fencing-scripts.yaml`](https://github.com/kvaps/kube-fencing/raw/master/examples/fencing-scripts.yaml) configmap and prepare your own script there.
-This script must describe fencing procedure for your infrastructure.
+```bash
+# Simple notify example (with after-hook)
+kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/deploy/examples/after-hook.yaml
 
-Script takes first argument as **node name**, and should return **zero exit-code** if fencing was succesful and **non-zero exit-code** if fencing was failed.
-
-Another words **fencing-controller** will call this script like:
-```
-kubectl exec -n fencing fencing-agents-577dff5bf8-fp5np /scripts/fence.sh <nodename>
+# HP iLO example
+kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/deploy/examples/hp-ilo.yaml
 ```
 
-In the example script you can see the next procedure:
+### Prepare own fencing template
 
-* take first argument and save it into NAME variable
-* write `<nodename>-ilo` into ILO vatiable
-* run **fence_ilo** agent via `<nodename>-ilo`.
+Prepare your own fencing PodTemplate using the examples above.
 
-You can implement any logic there.
+Fencing-controller will spawn this PodTemplate every time when node going to unknown state.  
+It also appends `fencing/node` and `fencing/id` annotations to the pod, thus allows you to use this information in your fencing command.
 
-In case if you have many different devices in your ifrastructure you can run multiple **fencing-controllers** with different label-selectors for the nodes, or implement all logic in one script, it's your choose.
+The specified command must ends with `0` exit-code when fencing was successful and return `1` exit-code when failed.
 
-### Mark nodes as fencing enabled
-
-```
-kubectl label node <nodename> fencing=enabled
-```
-
-*Note: after this action **fencing-swithcer** will mark nodes as `fencing=enabled` and `fencing=disabled` automatically when node is boots up or shuting down gracefully*
+You can create multiple PodTemplates for different nodes, but `fencing` will be used by default.
 
 ## Configuration parameters
 
-All configuration is reduced to the environment variables.
+All configuration is reduced to the specific annotations.
 
-You can specify needed variables inside yaml file for each service.
+You can specify the needed annotations for specific node or commonly for PodTemplate, hovewer node annotations take precedence.
 
-### fencing-controller
-
-* **FENCING_NODE_SELECTOR**
-
-  Label for fencing enabled nodes, fencing-controller will watch for the nodes only with this label <br>
-  *(example: `fencing=enabled`)*
-  
-* **FENCING_AGENT_SELECTOR**
-
-  Agent pod selector, fencing-controller will run script inside this pod, it should be `Running` in the same namespace with fencing-controller *(example: `app=fencing-agents`)*
-  
-* **FENCING_SCRIPT**
-
-  Script to call on agent pod *(example: `/scripts/fence.sh`)*
-  
-* **FLUSHING_MODE**
-
-  * `delete` - to delete node from cluster.
-  * `recreate` - to flush all resources from node, and recreate node.
-  * `none` - do nothing, just call the script.
-  * `info` - do nothing and disable fencing call (for debugging)
-
-* **TIMEOUT**
-
-  If set, wait certian amout seconds before killing the node *(example: `10`)*
-
-* **DEBUG**
-
-  If set, debug output will be enabled *(example: `1`)*
-  
-
-### fencing-switcher
-
-* **FENCING_LABEL**
-
-  Label name to switch on the node, this label will switch between `enabled`/`disabled` parameters *(example: `fencing`)*
-  
-* **NODE_NAME**
-
-  Should always be equal `spec.nodeName` for the node where it is running.
-
-* **DEBUG**
-
-  If set, debug output will be enabled *(example: `1`)*
+| Annotation | Description | Default  |
+|:-|:-|:-|
+| `fencing/enabled` | Fencing-switcher automatically sets this annotation to enable or disable fencing for the node. *(can be specified only for node, usually you don't need to configure it)*. | `false` |
+| `fencing/id`      | Specify the device id which will be used to fence the node. | *same as node name* |
+| `fencing/template`| Specify PodTemplate which be used to fence the node. | `fencing` |
+| `fencing/mode`    | Specify cleanup mode for the node: <ul><li><code>none</code> - do nothing after succesful fencing.</li><li><code>flush</code> - remove all pods and volumeattachments from the node after succesful fencing.</li><li><code>delete</code> - remove the node after succesful fencing.</li></ul>  | `flush` |
+| `fencing/after-hook` | Specific PodTemplate which will be spawned after successful fencing. | *unspecified* |
+| `fencing/timeout` | Timeout in seconds to wait for the node recovery before starting fencing procedure. | `0` |
+| `fencing/ttl`     | `TTLSecondsAfterFinished` parameter for the created Jobs. | `100` |
