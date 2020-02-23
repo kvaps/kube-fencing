@@ -1,0 +1,35 @@
+{{- if .Values.controller.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fencing.fullname" . }}-controller
+spec:
+  replicas: {{ .Values.controller.image.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "fencing.fullname" . }}-controller
+  template:
+    metadata:
+      labels:
+        app: {{ template "fencing.fullname" . }}-controller
+    spec:
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ template "fencing.fullname" . }}-controller
+      hostNetwork: true
+      {{- with .Values.controller.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: controller
+        image: {{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}
+        imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+{{- end }}

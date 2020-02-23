@@ -1,0 +1,39 @@
+{{- if .Values.switcher.enabled }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ template "fencing.fullname" . }}-switcher
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "fencing.fullname" . }}-switcher
+  template:
+    metadata:
+      labels:
+        app: {{ template "fencing.fullname" . }}-switcher
+    spec:
+      {{- with .Values.switcher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.switcher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ template "fencing.fullname" . }}-switcher
+      hostNetwork: true
+      {{- with .Values.switcher.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: switcher
+        image: {{ .Values.switcher.image.repository }}:{{ .Values.switcher.image.tag }}
+        imagePullPolicy: {{ .Values.switcher.image.pullPolicy }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+{{- end }}

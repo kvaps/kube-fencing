@@ -1,0 +1,46 @@
+# ------------------------------------------------------------------------------
+# fencing-controller watches for the failed nodes and initializates fencing
+# process
+# ------------------------------------------------------------------------------
+
+controller:
+  enabled: true
+  replicas: 2
+
+  image:
+    repository: docker.io/kvaps/kube-fencing-controller
+    tag: v2.0.0
+    pullPolicy: IfNotPresent
+    pullSecrets:
+      - name: regsecret
+
+  nodeSelector: {}
+  #  'node-role.kubernetes.io/master': ''
+
+  tolerations: []
+  #  - key: node-role.kubernetes.io/master
+  #    operator: Exists
+  #    effect: NoSchedule
+  
+# ------------------------------------------------------------------------------
+# fencing-switcher enables and disables fencing for the node during graceful
+# shutdown
+# ------------------------------------------------------------------------------
+
+switcher:
+  enabled: true
+
+  image:
+    repository: docker.io/kvaps/kube-fencing-switcher
+    tag: v2.0.0
+    pullPolicy: IfNotPresent
+    pullSecrets:
+      - name: regsecret
+
+  nodeSelector: {}
+  #  'node-role.kubernetes.io/master': ''
+
+  tolerations: []
+  #  - key: node-role.kubernetes.io/master
+  #    operator: Exists
+  #    effect: NoSchedule
