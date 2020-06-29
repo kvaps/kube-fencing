@@ -6,7 +6,7 @@ template:
   spec:
     containers:
     - name: fence
-      image: docker.io/kvaps/kube-fencing-agents:v2.0.0
+      image: docker.io/kvaps/kube-fencing-agents:v2.0.1
       command: ["fence_ilo", "-a", "$(FENCING_ID)", "-l", "user", "-p", "password"]
       env:
       - name: FENCING_NODE
