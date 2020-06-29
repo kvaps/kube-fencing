@@ -177,7 +177,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		return reconcile.Result{}, err
 	}
 
-	if fencingMode != "delete" || fencingMode != "none" {
+	if fencingMode != "delete" && fencingMode != "none" {
 		// Setting new condition
 		var newConditions []v1.NodeCondition
 
