@@ -40,7 +40,7 @@ This is small container which can be deployed as daemonset, it will enable fenci
 
 This container contains installed `fence-agents` package.
 
-When fencing procedure is called **fecning-controller** creates Job which can use **fecning-agents** image to execute specific fencing agent.
+When fencing procedure is called **fencing-controller** creates Job which can use **fencing-agents** image to execute specific fencing agent.
 If fencing was successful it will celanup (or delete) the node from the kubernetes.
 
 The next fencing agents are included:
