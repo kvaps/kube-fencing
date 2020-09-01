@@ -2,6 +2,7 @@ name: kube-fencing
 description: Fencing implementation for Kubernetes
 version: 2.0.1
 appVersion: 2.0.1
+icon: https://static.thenounproject.com/png/1281477-200.png
 keywords:
   - fencing
   - fence
