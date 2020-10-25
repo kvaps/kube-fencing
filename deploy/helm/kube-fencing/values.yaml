@@ -9,7 +9,7 @@ controller:
 
   image:
     repository: docker.io/kvaps/kube-fencing-controller
-    tag: v2.0.1
+    tag: v2.1.0
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
@@ -32,7 +32,7 @@ switcher:
 
   image:
     repository: docker.io/kvaps/kube-fencing-switcher
-    tag: v2.0.1
+    tag: v2.1.0
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
