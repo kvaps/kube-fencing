@@ -3,7 +3,6 @@ package job
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -288,16 +287,6 @@ func newJobForJob(job *batchv1.Job, podTemplate *v1.PodTemplate) *batchv1.Job {
 		suffix = "after-hook"
 	}
 
-	// Take ttl from the annotations
-	var ttl int32 = 100
-	if s, ok := podTemplate.Annotations["fencing/ttl"]; ok {
-		if i, err := strconv.Atoi(s); err != nil {
-			klog.Errorln("Failed to parse timeout", s, ":", err)
-		} else {
-			ttl = int32(i)
-		}
-	}
-
 	// Creating new Job
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -305,9 +294,16 @@ func newJobForJob(job *batchv1.Job, podTemplate *v1.PodTemplate) *batchv1.Job {
 			Namespace:   job.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				metav1.OwnerReference{
+					APIVersion: job.APIVersion,
+					Kind:       job.Kind,
+					Name:       job.Name,
+					UID:        job.UID,
+				},
+			},
 		},
 		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &ttl,
-			Template:                pod},
+			Template: pod},
 	}
 }

@@ -111,9 +111,8 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			if err != nil {
 				klog.Errorln("Failed to patch node", node.Name, ":", err)
 			}
-			return reconcile.Result{}, nil
+			fencingState = "recovered"
 		}
-
 	}
 
 	// Ignore already fenced nodes
@@ -122,12 +121,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	// We need only nodes with Unknown status
-	if c.Reason != "NodeStatusUnknown" {
-		return reconcile.Result{}, nil
-	}
-
-	// Handle only nodes with fencing/enabled=true annotation
-	if node.Annotations["fencing/enabled"] != "true" {
+	if fencingState != "recovered" && c.Reason != "NodeStatusUnknown" {
 		return reconcile.Result{}, nil
 	}
 
@@ -142,6 +136,29 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: templateName, Namespace: Namespace}, podTemplate)
 	if err != nil && errors.IsNotFound(err) {
 		klog.Errorln("Failed to find podTemplate", templateName, ":", err)
+		return reconcile.Result{}, nil
+	}
+
+	// Define a new Job object
+	job := newJobForNode(node, podTemplate)
+
+	// Remove previous fencing job
+	if fencingState == "recovered" {
+		// Check if this Job already exists
+		found := &batchv1.Job{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
+		if err == nil {
+			klog.Infoln("Deleting job", job.Name)
+			err = r.client.Delete(context.TODO(), found)
+			if err != nil {
+				klog.Errorln("Failed to delete job", job.Name, ":", err)
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Handle only nodes with fencing/enabled=true annotation
+	if node.Annotations["fencing/enabled"] != "true" {
 		return reconcile.Result{}, nil
 	}
 
@@ -233,31 +250,48 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	// Fencing procedure started
 	// ======================================
 
-	klog.Infoln("Starting fencing", node.Name)
-	// Define a new Job object
-	job := newJobForNode(node, podTemplate)
-
 	// Check if this Job already exists
 	found := &batchv1.Job{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-
-		klog.Infoln("Creating a new job", job.Name)
-		err = r.client.Create(context.TODO(), job)
-		if err != nil {
-			klog.Errorln("Failed to create new job", job.Name, ":", err)
-			return reconcile.Result{}, err
-		}
-
-		// Job created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
 
-	// Job already exists - don't requeue
-	klog.Infoln("Skip reconcile: job already exists", found.Name)
+	if err != nil {
+		// Previus job is not found
+		klog.Infoln("Starting fencing", node.Name)
+	} else {
+		// Previus job is found
+		klog.Infoln("Continue fencing", node.Name)
+
+		// Check is job finished
+		_, jc := GetJobCondition(&found.Status, batchv1.JobComplete)
+		_, jf := GetJobCondition(&found.Status, batchv1.JobFailed)
+		if jc == nil && jf == nil {
+			// Job is still running - don't requeue
+			klog.Infoln("Job", job.Name, "is still running")
+			return reconcile.Result{}, nil
+		}
+
+		// Old job finished already - remove it
+		klog.Infoln("Deleting previous job", job.Name) // TODO: wait for deletion
+		err = r.client.Delete(context.TODO(), found)
+		if err != nil {
+			klog.Errorln("Failed to delete job", job.Name, ":", err)
+			return reconcile.Result{}, err
+		}
+	}
+
+	klog.Infoln("Creating a new job", job.Name)
+	err = r.client.Create(context.TODO(), job)
+	if err != nil {
+		klog.Errorln("Failed to create new job", job.Name, ":", err)
+		return reconcile.Result{}, err
+	}
+
+	// Job created successfully - don't requeue
 	return reconcile.Result{}, nil
+
 }
 
 // newJobForNode returns a Job to fence the node
@@ -318,16 +352,6 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 		prefix = "fence"
 	}
 
-	// Take ttl from the annotations
-	var ttl int32 = 100
-	if s, ok := podTemplate.Annotations["fencing/ttl"]; ok {
-		if i, err := strconv.Atoi(s); err != nil {
-			klog.Errorln("Failed to parse timeout", s, ":", err)
-		} else {
-			ttl = int32(i)
-		}
-	}
-
 	// Creating new Job
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -335,16 +359,37 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 			Namespace:   Namespace,
 			Labels:      labels,
 			Annotations: annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				metav1.OwnerReference{
+					APIVersion: node.APIVersion,
+					Kind:       node.Kind,
+					Name:       node.Name,
+					UID:        node.UID,
+				},
+			},
 		},
 		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &ttl,
-			Template:                pod},
+			Template: pod},
 	}
 }
 
 // GetNodeCondition extracts the provided condition from the given status and returns that.
 // Returns nil and -1 if the condition is not present, and the index of the located condition.
 func GetNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
+	if status == nil {
+		return -1, nil
+	}
+	for i := range status.Conditions {
+		if status.Conditions[i].Type == conditionType {
+			return i, &status.Conditions[i]
+		}
+	}
+	return -1, nil
+}
+
+// GetJobCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+func GetJobCondition(status *batchv1.JobStatus, conditionType batchv1.JobConditionType) (int, *batchv1.JobCondition) {
 	if status == nil {
 		return -1, nil
 	}

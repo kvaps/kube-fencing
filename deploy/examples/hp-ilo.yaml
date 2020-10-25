@@ -4,6 +4,7 @@ metadata:
   name: fencing
 template:
   spec:
+    restartPolicy: OnFailure
     containers:
     - name: fence
       image: docker.io/kvaps/kube-fencing-agents:v2.0.1
