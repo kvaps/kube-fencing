@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kvaps/kube-fencing/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -88,35 +89,21 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	fencingState := node.Annotations["fencing/state"]
 
 	// Get node condition
-	_, c := GetNodeCondition(&node.Status, v1.NodeReady)
+	_, c := util.GetNodeCondition(&node.Status, v1.NodeReady)
 	if c == nil {
 		return reconcile.Result{}, nil
 	}
 
 	// Node is Ready
 	if c.Status == v1.ConditionTrue {
-
-		// Node recovered, remove fencing/state annotation
-		if fencingState == "pending" || fencingState == "fenced" {
-			klog.Infoln("Node", node.Name, "recovered")
-			mergePatch, _ := json.Marshal(map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"fencing/state":     nil,
-						"fencing/timestamp": nil,
-					},
-				},
-			})
-			err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
-			if err != nil {
-				klog.Errorln("Failed to patch node", node.Name, ":", err)
-			}
+		switch fencingState {
+		case "pending", "fenced", "started", "failed":
 			fencingState = "recovered"
 		}
 	}
 
 	// Ignore already fenced nodes
-	if fencingState == "fenced" {
+	if fencingState == "fenced" || fencingState == "failed" {
 		return reconcile.Result{}, nil
 	}
 
@@ -142,17 +129,62 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	// Define a new Job object
 	job := newJobForNode(node, podTemplate)
 
-	// Remove previous fencing job
 	if fencingState == "recovered" {
-		// Check if this Job already exists
+		recovered := false
+
+		// Node recovered
+		klog.Infoln("Node", node.Name, "return online")
+
+		// Check if fencing job is exists
 		found := &batchv1.Job{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
-		if err == nil {
-			klog.Infoln("Deleting job", job.Name)
-			err = r.client.Delete(context.TODO(), found)
+		if err != nil && !errors.IsNotFound(err) {
+			return reconcile.Result{}, err
+		}
+
+		if err != nil {
+			// Fencing job is not found
+			recovered = true
+		} else {
+			// Fencing job is found
+
+			// Check is job finished
+			_, jc := util.GetJobCondition(&found.Status, batchv1.JobComplete)
+			_, jf := util.GetJobCondition(&found.Status, batchv1.JobFailed)
+			if jc == nil && jf == nil {
+				// Job is still running - don't requeue
+				klog.Infoln("Job", job.Name, "is still running")
+				return reconcile.Result{}, nil
+			}
+
+			// Old job finished already - remove it
+			klog.Infoln("Deleting fencing job", job.Name)
+			err = r.client.Delete(context.TODO(), found,
+				client.GracePeriodSeconds(0),
+				client.PropagationPolicy(metav1.DeletePropagationBackground),
+			)
 			if err != nil {
 				klog.Errorln("Failed to delete job", job.Name, ":", err)
+				return reconcile.Result{}, err
 			}
+			recovered = true
+		}
+
+		if recovered {
+			//  remove fencing/state annotation
+			mergePatch, _ := json.Marshal(map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						"fencing/state":     nil,
+						"fencing/timestamp": nil,
+					},
+				},
+			})
+			err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+			if err != nil {
+				klog.Errorln("Failed to patch node", node.Name, ":", err)
+			}
+			klog.Infoln("Node", node.Name, "recovered")
 		}
 		return reconcile.Result{}, nil
 	}
@@ -265,17 +297,25 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		klog.Infoln("Continue fencing", node.Name)
 
 		// Check is job finished
-		_, jc := GetJobCondition(&found.Status, batchv1.JobComplete)
-		_, jf := GetJobCondition(&found.Status, batchv1.JobFailed)
-		if jc == nil && jf == nil {
+		_, jf := util.GetJobCondition(&found.Status, batchv1.JobFailed)
+		if jf != nil {
+			// Job is still running - don't requeue
+			klog.Infoln("Job", job.Name, "failed")
+			return reconcile.Result{}, nil
+		}
+		_, jc := util.GetJobCondition(&found.Status, batchv1.JobComplete)
+		if jc != nil {
 			// Job is still running - don't requeue
 			klog.Infoln("Job", job.Name, "is still running")
 			return reconcile.Result{}, nil
 		}
 
 		// Old job finished already - remove it
-		klog.Infoln("Deleting previous job", job.Name) // TODO: wait for deletion
-		err = r.client.Delete(context.TODO(), found)
+		klog.Infoln("Deleting previous job", job.Name)
+		err = r.client.Delete(context.TODO(), found,
+			client.GracePeriodSeconds(0),
+			client.PropagationPolicy(metav1.DeletePropagationBackground),
+		)
 		if err != nil {
 			klog.Errorln("Failed to delete job", job.Name, ":", err)
 			return reconcile.Result{}, err
@@ -353,6 +393,7 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 	}
 
 	// Creating new Job
+	tr := true
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        prefix + "-" + node.Name,
@@ -361,42 +402,16 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				metav1.OwnerReference{
-					APIVersion: node.APIVersion,
-					Kind:       node.Kind,
-					Name:       node.Name,
-					UID:        node.UID,
+					APIVersion:         node.APIVersion,
+					Kind:               node.Kind,
+					Name:               node.Name,
+					UID:                node.UID,
+					Controller:         &tr,
+					BlockOwnerDeletion: &tr,
 				},
 			},
 		},
 		Spec: batchv1.JobSpec{
 			Template: pod},
 	}
-}
-
-// GetNodeCondition extracts the provided condition from the given status and returns that.
-// Returns nil and -1 if the condition is not present, and the index of the located condition.
-func GetNodeCondition(status *v1.NodeStatus, conditionType v1.NodeConditionType) (int, *v1.NodeCondition) {
-	if status == nil {
-		return -1, nil
-	}
-	for i := range status.Conditions {
-		if status.Conditions[i].Type == conditionType {
-			return i, &status.Conditions[i]
-		}
-	}
-	return -1, nil
-}
-
-// GetJobCondition extracts the provided condition from the given status and returns that.
-// Returns nil and -1 if the condition is not present, and the index of the located condition.
-func GetJobCondition(status *batchv1.JobStatus, conditionType batchv1.JobConditionType) (int, *batchv1.JobCondition) {
-	if status == nil {
-		return -1, nil
-	}
-	for i := range status.Conditions {
-		if status.Conditions[i].Type == conditionType {
-			return i, &status.Conditions[i]
-		}
-	}
-	return -1, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/kvaps/kube-fencing/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -102,13 +103,31 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		return reconcile.Result{}, err
 	}
 
-	// We need to wait until job succeeded
-	if instance.Status.Succeeded < 1 {
-		return reconcile.Result{}, nil
-		// Set fencing/status=error if job was failed
-		if instance.Status.Failed > 0 {
-			klog.Infoln("Failed fencing node", nodeName)
+	// Set fencing/state=failed if job was failed
+	_, jf := util.GetJobCondition(&instance.Status, batchv1.JobFailed)
+	if jf != nil {
+		klog.Infoln("Failed fencing node", nodeName)
+		// Setting fencing status annotation
+		mergePatch, _ := json.Marshal(map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					"fencing/state":     "failed",
+					"fencing/timestamp": nil,
+				},
+			},
+		})
+		err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+		if err != nil {
+			klog.Errorln("Failed to patch node", node.Name, ":", err)
+			return reconcile.Result{}, err
 		}
+		return reconcile.Result{}, nil
+	}
+
+	// We need to wait until job succeeded
+	_, jc := util.GetJobCondition(&instance.Status, batchv1.JobComplete)
+	if jc == nil {
+		return reconcile.Result{}, nil
 	}
 
 	klog.Infoln("Succesful fencing node", nodeName)
@@ -126,7 +145,10 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 	case "delete":
 		// Delete the node
 		klog.Infoln("Removing node", nodeName)
-		err = r.client.Delete(context.TODO(), node)
+		err = r.client.Delete(context.TODO(), node,
+			client.GracePeriodSeconds(0),
+			client.PropagationPolicy(metav1.DeletePropagationBackground),
+		)
 		if err != nil {
 			klog.Errorln("Failed to delete node", nodeName, ":", err)
 			return reconcile.Result{}, nil
@@ -146,6 +168,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 				client.InNamespace(ns.Name),
 				client.MatchingFields{"spec.nodeName": nodeName},
 				client.GracePeriodSeconds(0),
+				client.PropagationPolicy(metav1.DeletePropagationBackground),
 			}
 			err = r.client.DeleteAllOf(context.TODO(), pod, opts...)
 			if err != nil {
@@ -199,26 +222,26 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 			klog.Error("Failed to patch node", nodeName, ":", err)
 			return reconcile.Result{}, err
 		}
+	}
 
-		// Setting fencing status annotation
-		mergePatch, _ := json.Marshal(map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"fencing/state":     "fenced",
-					"fencing/timestamp": nil,
-				},
+	// Setting fencing status annotation
+	mergePatch, _ := json.Marshal(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"fencing/state":     "fenced",
+				"fencing/timestamp": nil,
 			},
-		})
-		err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
-		if err != nil {
-			klog.Errorln("Failed to patch node", node.Name, ":", err)
-			return reconcile.Result{}, err
-		}
-		err = r.client.Patch(context.TODO(), instance, client.RawPatch(types.MergePatchType, mergePatch))
-		if err != nil {
-			klog.Errorln("Failed to patch job", instance.Name, ":", err)
-			return reconcile.Result{}, err
-		}
+		},
+	})
+	err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+	if err != nil {
+		klog.Errorln("Failed to patch node", node.Name, ":", err)
+		return reconcile.Result{}, err
+	}
+	err = r.client.Patch(context.TODO(), instance, client.RawPatch(types.MergePatchType, mergePatch))
+	if err != nil {
+		klog.Errorln("Failed to patch job", instance.Name, ":", err)
+		return reconcile.Result{}, err
 	}
 
 	// Get after-hook annotation
@@ -288,6 +311,7 @@ func newJobForJob(job *batchv1.Job, podTemplate *v1.PodTemplate) *batchv1.Job {
 	}
 
 	// Creating new Job
+	tr := true
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        job.Name + "-" + suffix,
@@ -296,10 +320,12 @@ func newJobForJob(job *batchv1.Job, podTemplate *v1.PodTemplate) *batchv1.Job {
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				metav1.OwnerReference{
-					APIVersion: job.APIVersion,
-					Kind:       job.Kind,
-					Name:       job.Name,
-					UID:        job.UID,
+					APIVersion:         job.APIVersion,
+					Kind:               job.Kind,
+					Name:               job.Name,
+					UID:                job.UID,
+					Controller:         &tr,
+					BlockOwnerDeletion: &tr,
 				},
 			},
 		},
