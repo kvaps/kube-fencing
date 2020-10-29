@@ -12,10 +12,10 @@ metadata:
 rules:
   - apiGroups: ["batch", "extensions"]
     resources: ["jobs"]
-    verbs: ["list", "watch", "get", "create", "update", "patch"]
+    verbs: ["list", "watch", "get", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["configmaps"]
-    verbs: ["get", "update", "patch"]
+    verbs: ["get", "update", "patch", "create"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create"]
@@ -47,6 +47,15 @@ rules:
   - apiGroups: [""]
     resources: ["nodes/status"]
     verbs: ["update", "patch"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["deletecollection"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["list", "watch", "deletecollection"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
