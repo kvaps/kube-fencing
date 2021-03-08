@@ -5,7 +5,7 @@ kind: Deployment
 metadata:
   name: {{ template "fencing.fullname" . }}-controller
 spec:
-  replicas: {{ .Values.controller.image.replicas }}
+  replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
       app: {{ template "fencing.fullname" . }}-controller
