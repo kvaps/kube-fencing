@@ -55,7 +55,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: fencing
+    namespace: linstor
 ---
 # Source: kube-fencing/templates/switcher-rbac.yaml
 kind: ClusterRoleBinding
@@ -69,7 +69,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-switcher
-    namespace: fencing
+    namespace: linstor
 ---
 # Source: kube-fencing/templates/controller-rbac.yaml
 kind: Role
@@ -98,7 +98,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: fencing
+    namespace: linstor
 roleRef:
   kind: Role
   name: fencing-controller
@@ -124,7 +124,7 @@ spec:
         - name: regsecret
       containers:
       - name: switcher
-        image: docker.io/kvaps/kube-fencing-switcher:v2.1.0
+        image: docker.io/kvaps/kube-fencing-switcher:v2.2.0
         imagePullPolicy: IfNotPresent
         env:
         - name: NODE_NAME
@@ -138,7 +138,7 @@ kind: Deployment
 metadata:
   name: fencing-controller
 spec:
-  replicas: 
+  replicas: 2
   selector:
     matchLabels:
       app: fencing-controller
@@ -153,5 +153,5 @@ spec:
         - name: regsecret
       containers:
       - name: controller
-        image: docker.io/kvaps/kube-fencing-controller:v2.1.0
+        image: docker.io/kvaps/kube-fencing-controller:v2.2.0
         imagePullPolicy: IfNotPresent
