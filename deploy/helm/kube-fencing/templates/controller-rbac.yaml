@@ -22,6 +22,12 @@ rules:
   - apiGroups: [""]
     resources: ["podtemplates"]
     verbs: ["list", "watch", "get"]
+  {{- if .Values.podSecurityPolicy.enabled }}
+  - apiGroups: ["extensions"]
+    resources: ["podsecuritypolicies"]
+    resourceNames: ["{{ template "fencing.fullname" . }}"]
+    verbs: ["use"]
+  {{- end }}
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
