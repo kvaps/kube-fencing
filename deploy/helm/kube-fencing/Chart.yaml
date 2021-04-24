@@ -1,3 +1,4 @@
+apiVersion: v2
 name: kube-fencing
 description: Fencing implementation for Kubernetes
 version: 2.2.0
