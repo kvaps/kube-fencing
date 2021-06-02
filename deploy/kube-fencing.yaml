@@ -55,7 +55,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: linstor
+    namespace: default
 ---
 # Source: kube-fencing/templates/switcher-rbac.yaml
 kind: ClusterRoleBinding
@@ -69,7 +69,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-switcher
-    namespace: linstor
+    namespace: default
 ---
 # Source: kube-fencing/templates/controller-rbac.yaml
 kind: Role
@@ -98,7 +98,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: linstor
+    namespace: default
 roleRef:
   kind: Role
   name: fencing-controller
