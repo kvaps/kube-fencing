@@ -394,9 +394,23 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 
 	// Creating new Job
 	tr := true
+	jobName := prefix + "-" + node.Name
+
+	//Use hash of nodename if orignal job name is going beyond 63 char
+	if len(jobName) > 63 {
+		nodeHash := util.GetHash(node.Name)
+		jobName = prefix + "-" + nodeHash
+
+		//If it is still going beyond 63 char, trim prefix
+		if len(jobName) > 63 {
+			rem := 63 - len(nodeHash) - 1
+			jobName = prefix[:rem] + "-" + nodeHash
+		}
+	}
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        prefix + "-" + node.Name,
+			Name:        jobName,
 			Namespace:   Namespace,
 			Labels:      labels,
 			Annotations: annotations,
