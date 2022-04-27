@@ -124,7 +124,7 @@ spec:
         - name: regsecret
       containers:
       - name: switcher
-        image: docker.io/kvaps/kube-fencing-switcher:v2.2.0
+        image: ghcr.io/kvaps/kube-fencing-switcher:v2.3.0
         imagePullPolicy: IfNotPresent
         env:
         - name: NODE_NAME
@@ -153,5 +153,5 @@ spec:
         - name: regsecret
       containers:
       - name: controller
-        image: docker.io/kvaps/kube-fencing-controller:v2.2.0
+        image: ghcr.io/kvaps/kube-fencing-controller:v2.3.0
         imagePullPolicy: IfNotPresent
