@@ -312,9 +312,21 @@ func newJobForJob(job *batchv1.Job, podTemplate *v1.PodTemplate) *batchv1.Job {
 
 	// Creating new Job
 	tr := true
+	jobName := job.Name + "-" + suffix
+	if len(jobName) > 63 {
+		jobHash := util.GetHash(job.Name)
+		newSuffix := jobHash + "-" + suffix
+
+		//If it is still going beyond 63 char, trim suffix
+		if len(newSuffix) > 63 {
+			newSuffix = newSuffix[:63]
+		}
+		jobName = job.Name[:(63-len(newSuffix))] + newSuffix
+	}
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        job.Name + "-" + suffix,
+			Name:        jobName,
 			Namespace:   job.Namespace,
 			Labels:      labels,
 			Annotations: annotations,

@@ -1,6 +1,9 @@
 package util
 
 import (
+	"fmt"
+	"hash/fnv"
+
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 )
@@ -31,4 +34,11 @@ func GetJobCondition(status *batchv1.JobStatus, conditionType batchv1.JobConditi
 		}
 	}
 	return -1, nil
+}
+
+// GetHash returns fixed size hash of given string
+func GetHash(name string) string {
+	algo := fnv.New32()
+	algo.Write([]byte(name))
+	return fmt.Sprint(algo.Sum32())
 }
