@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+        taintutils "k8s.io/kubernetes/pkg/util/taints"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -192,6 +193,34 @@ func (r *ReconcileJob) Reconcile(ctx context.Context, request reconcile.Request)
 				if err != nil {
 					klog.Errorln("Failed to delete volumeattachment", va.Name, ":", err)
 				}
+			}
+		}
+	case "taint":
+		// Setting out-of-service taint
+		OutOfServiceTaint := &v1.Taint{
+			Key:    v1.TaintNodeOutOfService,
+			Value:  "nodeshutdown",
+			Effect: v1.TaintEffectNoExecute,
+		}
+
+		_, changed, _ := taintutils.AddOrUpdateTaint(node, OutOfServiceTaint)
+
+		if changed {
+			mergePatch, _ := json.Marshal(map[string]interface{}{
+				"spec": map[string]interface{}{
+					"taints": []interface{}{
+						map[string]interface{}{
+							"key":     v1.TaintNodeOutOfService,
+							"value":   "nodeshutdown",
+							"effect":  v1.TaintEffectNoExecute,
+						},
+					},
+				},
+			})
+			err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
+			if err != nil {
+				klog.Errorln("Failed to patch node", node.Name, ":", err)
+				return reconcile.Result{}, err
 			}
 		}
 	default:
