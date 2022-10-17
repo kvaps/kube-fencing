@@ -8,9 +8,9 @@ controller:
   replicas: 2
 
   image:
-    repository: ghcr.io/kvaps/kube-fencing-controller
-    tag: v2.3.0
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/yosshy/kube-fencing/kube-fencing-controller
+    tag: latest
+    pullPolicy: Always
     pullSecrets:
       - name: regsecret
 
@@ -31,9 +31,9 @@ switcher:
   enabled: true
 
   image:
-    repository: ghcr.io/kvaps/kube-fencing-switcher
-    tag: v2.3.0
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/yosshy/kube-fencing/kube-fencing-switcher
+    tag: latest
+    pullPolicy: Always
     pullSecrets:
       - name: regsecret
 

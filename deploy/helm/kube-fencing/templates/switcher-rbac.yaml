@@ -4,6 +4,9 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -32,6 +35,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 rules:
   - apiGroups: ["extensions"]
     resources: ["podsecuritypolicies"]
@@ -42,6 +48,9 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 roleRef:
   kind: Role
   name: {{ template "fencing.fullname" . }}-switcher
