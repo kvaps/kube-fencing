@@ -3,6 +3,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-controller
 spec:
   replicas: {{ .Values.controller.replicas }}
@@ -12,7 +14,8 @@ spec:
   template:
     metadata:
       labels:
-        app: {{ template "fencing.fullname" . }}-controller
+        app: {{ template "fencing.fullname" . }}-controller          
+        {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
       {{- with .Values.controller.nodeSelector }}
       nodeSelector:
