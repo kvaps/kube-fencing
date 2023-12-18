@@ -3,11 +3,15 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 rules:
   - apiGroups: [""]
@@ -17,6 +21,8 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -31,6 +37,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 rules:
   - apiGroups: ["extensions"]
@@ -41,6 +49,8 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 roleRef:
   kind: Role

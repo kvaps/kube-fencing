@@ -1,3 +1,5 @@
+# Labels to apply to all resources
+commonLabels: {}
 # ------------------------------------------------------------------------------
 # fencing-controller watches for the failed nodes and initializates fencing
 # process

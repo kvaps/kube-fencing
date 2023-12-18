@@ -3,6 +3,8 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  labels:
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
 spec:
   selector:
@@ -12,6 +14,7 @@ spec:
     metadata:
       labels:
         app: {{ template "fencing.fullname" . }}-switcher
+        {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
       {{- with .Values.switcher.nodeSelector }}
       nodeSelector:
