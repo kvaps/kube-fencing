@@ -1,5 +1,6 @@
 # Labels to apply to all resources
 commonLabels: {}
+
 # ------------------------------------------------------------------------------
 # fencing-controller watches for the failed nodes and initializates fencing
 # process
@@ -24,6 +25,14 @@ controller:
   #    operator: Exists
   #    effect: NoSchedule
   
+  topologySpreadConstraints: []
+  #  - maxSkew: 1
+  #    topologyKey: topology.kubernetes.io/zone
+  #    whenUnsatisfiable: DoNotSchedule
+  #    labelSelector:
+  #      matchLabels:
+  #        app: "foo"
+
 # ------------------------------------------------------------------------------
 # fencing-switcher enables and disables fencing for the node during graceful
 # shutdown
