@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 spec:
   selector:
     matchLabels:

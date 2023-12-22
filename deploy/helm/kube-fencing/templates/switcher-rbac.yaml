@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -40,6 +43,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 rules:
   - apiGroups: ["extensions"]
     resources: ["podsecuritypolicies"]
@@ -52,6 +58,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-switcher
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 roleRef:
   kind: Role
   name: {{ template "fencing.fullname" . }}-switcher

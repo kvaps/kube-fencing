@@ -94,6 +94,6 @@ You can specify the needed annotations for specific node or commonly for PodTemp
 | `fencing/enabled` | Fencing-switcher automatically sets this annotation to enable or disable fencing for the node. *(can be specified only for node, usually you don't need to configure it)*. | `false` |
 | `fencing/id`      | Specify the device id which will be used to fence the node. | *same as node name* |
 | `fencing/template`| Specify PodTemplate which be used to fence the node. | `fencing` |
-| `fencing/mode`    | Specify cleanup mode for the node: <ul><li><code>none</code> - do nothing after successful fencing.</li><li><code>flush</code> - remove all pods and volumeattachments from the node after successful fencing.</li><li><code>delete</code> - remove the node after successful fencing.</li></ul>  | `flush` |
+| `fencing/mode`    | Specify cleanup mode for the node: <ul><li><code>none</code> - do nothing after successful fencing.</li><li><code>flush</code> - remove all pods and volumeattachments from the node after successful fencing.</li><li><code>taint</code> - remove all pods and volumeattachments from the node with "node.kubernetes.io/out-of-service" taint for k8s v1.24+. </li><li><code>delete</code> - remove the node after successful fencing.</li></ul>  | `flush` |
 | `fencing/after-hook` | Specific PodTemplate which will be spawned after successful fencing. | *unspecified* |
 | `fencing/timeout` | Timeout in seconds to wait for the node recovery before starting fencing procedure. | `0` |

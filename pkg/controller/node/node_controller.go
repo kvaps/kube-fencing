@@ -71,11 +71,11 @@ type ReconcileNode struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileNode) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 
 	// Fetch the Node instance
 	node := &v1.Node{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, node)
+	err := r.client.Get(ctx, request.NamespacedName, node)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found
@@ -120,7 +120,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// Find PodTemplate
 	podTemplate := &v1.PodTemplate{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: templateName, Namespace: Namespace}, podTemplate)
+	err = r.client.Get(ctx, types.NamespacedName{Name: templateName, Namespace: Namespace}, podTemplate)
 	if err != nil && errors.IsNotFound(err) {
 		klog.Errorln("Failed to find podTemplate", templateName, ":", err)
 		return reconcile.Result{}, nil
@@ -137,7 +137,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 		// Check if fencing job is exists
 		found := &batchv1.Job{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
+		err = r.client.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
 		if err != nil && !errors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
@@ -159,7 +159,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 			// Old job finished already - remove it
 			klog.Infoln("Deleting fencing job", job.Name)
-			err = r.client.Delete(context.TODO(), found,
+			err = r.client.Delete(ctx, found,
 				client.GracePeriodSeconds(0),
 				client.PropagationPolicy(metav1.DeletePropagationBackground),
 			)
@@ -180,7 +180,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 					},
 				},
 			})
-			err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+			err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 			if err != nil {
 				klog.Errorln("Failed to patch node", node.Name, ":", err)
 			}
@@ -234,7 +234,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 					},
 				})
 
-				err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+				err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 				if err != nil {
 					klog.Errorln("Failed to patch node", node.Name, ":", err)
 					return reconcile.Result{}, err
@@ -255,7 +255,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 							},
 						},
 					})
-					_ = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+					_ = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 				}()
 
 				return reconcile.Result{}, nil
@@ -270,7 +270,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 				},
 			},
 		})
-		err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+		err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 		if err != nil {
 			klog.Errorln("Failed to patch node", node.Name, ":", err)
 			return reconcile.Result{}, err
@@ -284,7 +284,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// Check if this Job already exists
 	found := &batchv1.Job{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
+	err = r.client.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
 	if err != nil && !errors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
@@ -312,7 +312,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 		// Old job finished already - remove it
 		klog.Infoln("Deleting previous job", job.Name)
-		err = r.client.Delete(context.TODO(), found,
+		err = r.client.Delete(ctx, found,
 			client.GracePeriodSeconds(0),
 			client.PropagationPolicy(metav1.DeletePropagationBackground),
 		)
@@ -323,7 +323,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	klog.Infoln("Creating a new job", job.Name)
-	err = r.client.Create(context.TODO(), job)
+	err = r.client.Create(ctx, job)
 	if err != nil {
 		klog.Errorln("Failed to create new job", job.Name, ":", err)
 		return reconcile.Result{}, err

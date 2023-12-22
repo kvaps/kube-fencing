@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-controller
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 spec:
   replicas: {{ .Values.controller.replicas }}
   selector:

@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-controller
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -13,6 +16,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-controller
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 rules:
   - apiGroups: ["batch", "extensions"]
     resources: ["jobs"]
@@ -39,6 +45,9 @@ metadata:
   labels:
     {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: {{ template "fencing.fullname" . }}-controller
+{{- if ne .Release.Namespace "default" }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 subjects:
   - kind: ServiceAccount
     name: {{ template "fencing.fullname" . }}-controller
@@ -70,6 +79,9 @@ rules:
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
     verbs: ["list", "watch", "deletecollection"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "list", "update"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
