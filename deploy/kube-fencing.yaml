@@ -1,15 +1,25 @@
 ---
+# Source: kube-fencing/templates/namespace.yaml
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: kube-fencing
+  labels:
+    name: kube-fencing
+---
 # Source: kube-fencing/templates/controller-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fencing-controller
+  namespace: kube-fencing
 ---
 # Source: kube-fencing/templates/switcher-rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fencing-switcher
+  namespace: kube-fencing
 ---
 # Source: kube-fencing/templates/controller-rbac.yaml
 kind: ClusterRole
@@ -32,6 +42,9 @@ rules:
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
     verbs: ["list", "watch", "deletecollection"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "list", "update"]
 ---
 # Source: kube-fencing/templates/switcher-rbac.yaml
 kind: ClusterRole
@@ -55,7 +68,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: default
+    namespace: kube-fencing
 ---
 # Source: kube-fencing/templates/switcher-rbac.yaml
 kind: ClusterRoleBinding
@@ -69,13 +82,14 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fencing-switcher
-    namespace: default
+    namespace: kube-fencing
 ---
 # Source: kube-fencing/templates/controller-rbac.yaml
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: fencing-controller
+  namespace: kube-fencing
 rules:
   - apiGroups: ["batch", "extensions"]
     resources: ["jobs"]
@@ -95,10 +109,11 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: fencing-controller
+  namespace: kube-fencing
 subjects:
   - kind: ServiceAccount
     name: fencing-controller
-    namespace: default
+    namespace: kube-fencing
 roleRef:
   kind: Role
   name: fencing-controller
@@ -109,6 +124,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: fencing-switcher
+  namespace: kube-fencing
 spec:
   selector:
     matchLabels:
@@ -124,8 +140,8 @@ spec:
         - name: regsecret
       containers:
       - name: switcher
-        image: ghcr.io/kvaps/kube-fencing-switcher:v2.3.0
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/kvaps/kube-fencing-switcher:v2.4.0
+        imagePullPolicy: Always
         env:
         - name: NODE_NAME
           valueFrom:
@@ -137,6 +153,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: fencing-controller
+  namespace: kube-fencing
 spec:
   replicas: 2
   selector:
@@ -153,5 +170,5 @@ spec:
         - name: regsecret
       containers:
       - name: controller
-        image: ghcr.io/kvaps/kube-fencing-controller:v2.3.0
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/kvaps/kube-fencing-controller:v2.4.0
+        imagePullPolicy: Always

@@ -1,0 +1,9 @@
+{{- if and (ne .Release.Namespace "kube-system") (ne .Release.Namespace "default") -}}
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    name: {{ .Release.Namespace }}
+{{- end -}}

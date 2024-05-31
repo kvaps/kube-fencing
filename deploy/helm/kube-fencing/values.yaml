@@ -12,7 +12,7 @@ controller:
 
   image:
     repository: ghcr.io/kvaps/kube-fencing-controller
-    tag: v2.3.0
+    tag: v2.4.0
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret
@@ -43,7 +43,7 @@ switcher:
 
   image:
     repository: ghcr.io/kvaps/kube-fencing-switcher
-    tag: v2.3.0
+    tag: v2.4.0
     pullPolicy: IfNotPresent
     pullSecrets:
       - name: regsecret

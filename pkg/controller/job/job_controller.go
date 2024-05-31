@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+        taintutils "k8s.io/kubernetes/pkg/util/taints"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -65,11 +66,11 @@ type ReconcileJob struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileJob) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 
 	// Fetch the Job instance
 	instance := &batchv1.Job{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found.
@@ -97,7 +98,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	// Get the node
 	node := &v1.Node{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, node)
+	err = r.client.Get(ctx, types.NamespacedName{Name: nodeName}, node)
 	if err != nil {
 		klog.Errorln(err, "No node found", nodeName)
 		return reconcile.Result{}, err
@@ -116,7 +117,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 				},
 			},
 		})
-		err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+		err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 		if err != nil {
 			klog.Errorln("Failed to patch node", node.Name, ":", err)
 			return reconcile.Result{}, err
@@ -145,7 +146,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 	case "delete":
 		// Delete the node
 		klog.Infoln("Removing node", nodeName)
-		err = r.client.Delete(context.TODO(), node,
+		err = r.client.Delete(ctx, node,
 			client.GracePeriodSeconds(0),
 			client.PropagationPolicy(metav1.DeletePropagationBackground),
 		)
@@ -160,7 +161,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		// Fetch a list of all namespaces for DeleteAllOf requests
 		namespaces := v1.NamespaceList{}
 		pod := &v1.Pod{}
-		if err := r.client.List(context.TODO(), &namespaces); err != nil {
+		if err := r.client.List(ctx, &namespaces); err != nil {
 			klog.Errorln("Failed to get namespace list:", err)
 		}
 		for _, ns := range namespaces.Items {
@@ -170,7 +171,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 				client.GracePeriodSeconds(0),
 				client.PropagationPolicy(metav1.DeletePropagationBackground),
 			}
-			err = r.client.DeleteAllOf(context.TODO(), pod, opts...)
+			err = r.client.DeleteAllOf(ctx, pod, opts...)
 			if err != nil {
 				klog.Errorln("Failed to delete pods in namespace", ns.Name, ":", err)
 			}
@@ -179,7 +180,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		// Fetch a list of all volumeattachments and delete them
 		volumeattachment := &storagev1.VolumeAttachment{}
 		volumeattachments := storagev1.VolumeAttachmentList{}
-		if err := r.client.List(context.TODO(), &volumeattachments); err != nil {
+		if err := r.client.List(ctx, &volumeattachments); err != nil {
 			klog.Errorln("Failed to get volumeattachment list:", err)
 		}
 		for _, va := range volumeattachments.Items {
@@ -188,10 +189,38 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 					client.MatchingFields{"metadata.name": va.Name},
 					client.GracePeriodSeconds(0),
 				}
-				err = r.client.DeleteAllOf(context.TODO(), volumeattachment, opts...)
+				err = r.client.DeleteAllOf(ctx, volumeattachment, opts...)
 				if err != nil {
 					klog.Errorln("Failed to delete volumeattachment", va.Name, ":", err)
 				}
+			}
+		}
+	case "taint":
+		// Setting out-of-service taint
+		OutOfServiceTaint := &v1.Taint{
+			Key:    v1.TaintNodeOutOfService,
+			Value:  "nodeshutdown",
+			Effect: v1.TaintEffectNoExecute,
+		}
+
+		_, changed, _ := taintutils.AddOrUpdateTaint(node, OutOfServiceTaint)
+
+		if changed {
+			mergePatch, _ := json.Marshal(map[string]interface{}{
+				"spec": map[string]interface{}{
+					"taints": []interface{}{
+						map[string]interface{}{
+							"key":     v1.TaintNodeOutOfService,
+							"value":   "nodeshutdown",
+							"effect":  v1.TaintEffectNoExecute,
+						},
+					},
+				},
+			})
+			err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
+			if err != nil {
+				klog.Errorln("Failed to patch node", node.Name, ":", err)
+				return reconcile.Result{}, err
 			}
 		}
 	default:
@@ -233,12 +262,12 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 			},
 		},
 	})
-	err = r.client.Patch(context.TODO(), node, client.RawPatch(types.MergePatchType, mergePatch))
+	err = r.client.Patch(ctx, node, client.RawPatch(types.MergePatchType, mergePatch))
 	if err != nil {
 		klog.Errorln("Failed to patch node", node.Name, ":", err)
 		return reconcile.Result{}, err
 	}
-	err = r.client.Patch(context.TODO(), instance, client.RawPatch(types.MergePatchType, mergePatch))
+	err = r.client.Patch(ctx, instance, client.RawPatch(types.MergePatchType, mergePatch))
 	if err != nil {
 		klog.Errorln("Failed to patch job", instance.Name, ":", err)
 		return reconcile.Result{}, err
@@ -253,7 +282,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	// Find PodTemplate for after hook
 	podTemplate := &v1.PodTemplate{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: afterHook, Namespace: instance.Namespace}, podTemplate)
+	err = r.client.Get(ctx, types.NamespacedName{Name: afterHook, Namespace: instance.Namespace}, podTemplate)
 	if err != nil && errors.IsNotFound(err) {
 		klog.Errorln("Failed to find podTemplate ", afterHook, ":", err)
 		return reconcile.Result{}, nil
@@ -264,10 +293,10 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	// Check if this Job already exists
 	found := &batchv1.Job{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
+	err = r.client.Get(ctx, types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		klog.Infoln("Creating a new job", job.Name)
-		err = r.client.Create(context.TODO(), job)
+		err = r.client.Create(ctx, job)
 		if err != nil {
 			klog.Errorln("Failed to create new Job", ":", err)
 			return reconcile.Result{}, err
