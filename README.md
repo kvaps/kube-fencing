@@ -22,7 +22,7 @@ Fencing implementation for Kubernetes
 
 This project designed to solve the problem of cleaning resources from the failed nodes that's blocks any further operation and recovery.
 
-Fencing is neccesary if you want to have redundancy for your StatefulSet pods.
+Fencing is necessary if you want to have redundancy for your StatefulSet Pods.
 
 If any node falls, **kube-fencing** will guaranteed kill it via **fence-agent**, afterwards it will clear the node of all resources, that's make Kubernetes possible to schedule pods on the rest nodes.
 
@@ -34,14 +34,16 @@ The main controller which watches for the node states, and if one of them become
 
 ### fencing-switcher
 
-This is small container which can be deployed as daemonset, it will enable fencing during start, and disable fencing when node is gracefully shutdowns or reboots.
+This is a small container which by default is deployed as a DaemonSet and:
+1. Enables fencing during start
+1. Disables fencing when the node gracefully shutdowns or reboots
 
 ### fencing-agents
 
 This container contains installed `fence-agents` package.
 
 When fencing procedure is called **fencing-controller** creates Job which can use **fencing-agents** image to execute specific fencing agent.
-If fencing was successful it will celanup (or delete) the node from the kubernetes.
+If fencing is successful it will cleanup (or delete) the node from the kubernetes.
 
 The next fencing agents are included:
 
@@ -58,6 +60,7 @@ fence_bladecenter     fence_drac5           fence_ibmblade        fence_ilo4    
 ## Quick Start
 
 ### Install kube-fencing
+
 ```bash
 kubectl apply -f https://github.com/kvaps/kube-fencing/raw/master/deploy/kube-fencing.yaml
 ```
@@ -87,12 +90,13 @@ You can create multiple PodTemplates for different nodes, but `fencing` will be 
 
 All configuration is reduced to the specific annotations.
 
-You can specify the needed annotations for specific node or commonly for PodTemplate, hovewer node annotations take precedence.
+You can specify the needed annotations for a specific node or commonly for the PodTemplate, however node annotations take precedence.
 
 | Annotation | Description | Default  |
 |:-|:-|:-|
 | `fencing/enabled` | Fencing-switcher automatically sets this annotation to enable or disable fencing for the node. *(can be specified only for node, usually you don't need to configure it)*. | `false` |
 | `fencing/id`      | Specify the device id which will be used to fence the node. | *same as node name* |
+| `fencing/id-template` | Specify a go-template for the device id based on the node name, e.g., `{{ . | lower }}`. The template supports all sprig functions | *unspecified* |
 | `fencing/template`| Specify PodTemplate which be used to fence the node. | `fencing` |
 | `fencing/mode`    | Specify cleanup mode for the node: <ul><li><code>none</code> - do nothing after successful fencing.</li><li><code>flush</code> - remove all pods and volumeattachments from the node after successful fencing.</li><li><code>taint</code> - remove all pods and volumeattachments from the node with "node.kubernetes.io/out-of-service" taint for k8s v1.24+. </li><li><code>delete</code> - remove the node after successful fencing.</li></ul>  | `flush` |
 | `fencing/after-hook` | Specific PodTemplate which will be spawned after successful fencing. | *unspecified* |
