@@ -1,8 +1,14 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
+
 	"strconv"
 	"time"
 
@@ -127,7 +133,11 @@ func (r *ReconcileNode) Reconcile(ctx context.Context, request reconcile.Request
 	}
 
 	// Define a new Job object
-	job := newJobForNode(node, podTemplate)
+	job, err := newJobForNode(node, podTemplate)
+	if err != nil {
+		klog.Errorln("Failed to create the Job for Node", node.Name, ":", err)
+		return reconcile.Result{}, err
+	}
 
 	if fencingState == "recovered" {
 		recovered := false
@@ -335,7 +345,7 @@ func (r *ReconcileNode) Reconcile(ctx context.Context, request reconcile.Request
 }
 
 // newJobForNode returns a Job to fence the node
-func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
+func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) (*batchv1.Job, error) {
 	labels := map[string]string{
 		"node":    node.Name,
 		"fencing": "fence",
@@ -373,6 +383,16 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 		annotations["fencing/id"] = id
 	} else if id, ok = podTemplate.Annotations["fencing/id"]; ok {
 		annotations["fencing/id"] = id
+	} else if id, ok = podTemplate.Annotations["fencing/id-template"]; ok {
+		tmpl, err := template.New("id").Funcs(sprig.FuncMap()).Parse(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse id template in Pod template: %v", err)
+		}
+		var idBytes bytes.Buffer
+		if err = tmpl.Execute(&idBytes, node.Name); err != nil {
+			return nil, fmt.Errorf("failed to execute template in Pod template:", err)
+		}
+		annotations["fencing/id"] = idBytes.String()
 	} else {
 		annotations["fencing/id"] = node.Name
 	}
@@ -427,5 +447,5 @@ func newJobForNode(node *v1.Node, podTemplate *v1.PodTemplate) *batchv1.Job {
 		},
 		Spec: batchv1.JobSpec{
 			Template: pod},
-	}
+	}, nil
 }
