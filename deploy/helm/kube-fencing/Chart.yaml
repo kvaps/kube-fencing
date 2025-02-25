@@ -1,8 +1,8 @@
 apiVersion: v2
 name: kube-fencing
 description: Fencing implementation for Kubernetes
-version: 2.3.1
-appVersion: 2.3.0
+version: 2.4.1
+appVersion: 2.4.0
 icon: https://static.thenounproject.com/png/1281477-200.png
 keywords:
   - fencing
